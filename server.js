@@ -20,6 +20,8 @@ const {connectRedis} = require('./src/config/redis'); //conector Redis
 const errorHandler = require('./src/middleware/errorHandler');
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
+const categoryRoutes = require('./src/routes/category.routes');
+const productRoutes = require('./src/routes/product.routes');
 
 // Launch App
 const app = express();
@@ -98,6 +100,8 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
 
 
 app.all('*', (req, res) => {
