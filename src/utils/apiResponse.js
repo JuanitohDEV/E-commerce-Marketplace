@@ -22,7 +22,7 @@ const sendSuccess = (
 /**
  * Paginated results - For lists with page, limit, and total
  * @param {object} res
- * @param {array} data  - Items of the current page
+ * @param {array} data  - Items of the current pagez
  * @param {object} pagination - {page, totalPages, totalItems, hasNextPage }
  * @param {string} message
 */

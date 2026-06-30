@@ -4,7 +4,7 @@ const AppError = require('../utils/AppError');
 
 // --- processAndUpload ------
 // Buffer (from Multer) -> Sharp (optimize) -> Cloudinary (CDN)
-const processAndUpload = async (buffer, folder, options) => {
+const processAndUpload = async (buffer, folder, options = {})  => {
     const{
         width = 800,
         height = 800,
