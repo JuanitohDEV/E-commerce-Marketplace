@@ -204,7 +204,7 @@ const restockProduct= async(req, res, next) => {
 
         // Reactivate product if it was out of stock
         if (stockBefore === 0 ){
-            await Product.findByIdAndUpdate(product._id, { isActive: true});
+           await Product.findByIdAndUpdate(product._id, { isActive: true });
         }
 
         sendSuccess(res, { stockBefore, stockAfter, quantity}, 'Stock updated');
@@ -261,8 +261,17 @@ const adjustStock = async (req, res, next) => {
         });
 
 
-        if( stockAfter === 0 ) {
-            await Product.findByIdAndUpdate(product._id, { isActive: false});
+        if(sku) {
+            const updateProduct = await Product.findById(product._id).select('variants');
+            const totalStock = updateProduct.variants
+            .filter((v) => v.isActive)
+            .reduce((sum, v) => sum + v.stock, 0);
+
+            if(totalStock === 0) {
+                await Product.findByIdAndUpdate(product._id, { isActive: false });
+            }
+        } else if (stockAfter === 0) {
+            await Product.findByIdAndUpdate(product._id, { isActive: false });
         }
 
         sendSuccess(res, { stockBefore, stockAfter, quantity}, 'Stock adjusted');

@@ -8,6 +8,7 @@ const Coupon = require('../models/Coupon');
 const Cart = require('../models/Cart');
 const User = require('../models/User');
 const { sendOrderConfirmationEmail } = require('../services/email.service');
+const { getRedis } = require('../config/redis');
 
 // POST /api/webhook/stripe
 
@@ -26,6 +27,13 @@ const handleStripeWebhook = async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    const redis = getRedis();
+    const isNewEvent = await redis.set(`webhook:${event.id}`, '1', 'EX', 60 * 60 * 72, 'NX'); // 72 hours TTL
+
+    if (!isNewEvent) {
+        return res.status(200).json({ received: true, duplicate: true });
+    }
+
     try {
         switch (event.type) {
             case 'payment_intent.succeeded':
@@ -34,6 +42,9 @@ const handleStripeWebhook = async (req, res) => {
             case 'payment_intent.payment_failed':
                 await handlePaymentFailed(event.data.object);
                 break;
+            case 'account.updated':
+                await handleAccountUpdated(event.data.object);
+                break;
             default:
                 console.log(`Unhandled Stripe event type ${event.type}`);
         }
@@ -41,6 +52,7 @@ const handleStripeWebhook = async (req, res) => {
         res.status(200).json({ received: true });
     } catch (error) {
         console.error('Error processing webhook event:', error);
+        await redis.del(`webhook:${event.id}`);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -88,6 +100,19 @@ const handlePaymentSucceeded = async (paymentIntent) => {
                 reference: order._id,
                 referenceModel: 'Order',
             });
+
+            // Deactivate product if it's now fully out of stock
+            if (item.sku) {
+                const totalStock = updateProduct.variants
+                    .filter((v) => v.isActive)
+                    .reduce((sum, v) => sum + v.stock, 0);
+
+                if (totalStock === 0) {
+                    await Product.findByIdAndUpdate(item.product, { isActive: false });
+                }
+            } else if (stockAfter === 0) {
+                await Product.findByIdAndUpdate(item.product, { isActive: false });
+            }
         }
 
         // Split items by seller and create one suborder per seller
@@ -131,6 +156,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
         // Mark the order as paid
         order.status = 'paid';
         order.paidAt = new Date();
+        order.chargeId = paymentIntent.latest_charge;
         order.statusHistory.push({ status: 'paid', note: 'Payment confirmed via Stripe' });
         await order.save();
 
@@ -174,6 +200,17 @@ const handlePaymentFailed = async (paymentIntent) => {
     order.cancelledAt = new Date();
     order.statusHistory.push({ status: 'cancelled', note: 'Payment failed' });
     await order.save();
+};
+
+// -------------------------------- account.updated --------------------------------
+
+const handleAccountUpdated = async (account) => {
+    const isComplete = account.charges_enabled && account.payouts_enabled;
+
+    await SellerProfile.findOneAndUpdate(
+        { stripeAccountId: account.id },
+        { stripeOnboardingComplete: isComplete },
+    );
 };
 
 module.exports = {

@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const SellerProfile = require('../models/SellerProfile');
 const AppError = require('../utils/AppError');
 const { sendSuccess, sendPaginated } = require('../utils/apiResponse');
 const { processMultiple, deleteImage } = require('../services/image.service');
@@ -144,6 +145,9 @@ const createProduct = async (req, res, next) => {
             return next(new AppError('At least one variant is required', 400));
         }
 
+        // Admins can create products without ever having a seller profile
+        const sellerProfile = await SellerProfile.findOne({ user: req.user._id });
+
         const productData = {
             name,
             description,
@@ -160,6 +164,7 @@ const createProduct = async (req, res, next) => {
             dimensions,
             meta,
             seller: req.user._id,
+            sellerProfile: sellerProfile?._id,
             approvalStatus: 'pending', // New products need admin approval
         };
 

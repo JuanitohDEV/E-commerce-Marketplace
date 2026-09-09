@@ -276,7 +276,7 @@ const deliverSubOrder = async (req, res, next) => {
         const subOrder = await SubOrder.findById(req.params.id);
         if(!subOrder) return next(new AppError('SubOrder not found', 404));
 
-        const order = await Order.findById(subOrder.order).select('user');
+        const order = await Order.findById(subOrder.order).select('user chargeId');
         if(!order || order.user.toString() !== req.user._id.toString()) {
             return next(new AppError('You can only confirm delivery for your own orders', 403));
         }
@@ -289,6 +289,26 @@ const deliverSubOrder = async (req, res, next) => {
         subOrder.deliveredAt = new Date();
         subOrder.statusHistory.push({ status: 'delivered', note: 'Delivered to customer'});
         await subOrder.save();
+
+        const sellerProfile = await SellerProfile.findOne({ user: subOrder.seller})
+            .select('+stripeAccountId stripeOnboardingComplete');
+
+        if (!sellerProfile || !sellerProfile.stripeOnboardingComplete || !sellerProfile.stripeAccountId) {
+            console.error(`Cannot transfer to seller ${subOrder.seller}: onboarding incomplete (subOrder ${subOrder._id})`);
+        } else if(!subOrder.stripeTransferId) {
+            const transfer = await stripe.transfers.create(
+                {
+                    amount: Math.round(subOrder.sellerEarnings * 100),
+                    currency: 'cop',
+                    destination: sellerProfile.stripeAccountId,
+                    source_transaction: order.chargeId,
+                },
+                { idempotencyKey: `transfer_${subOrder._id}` }
+            );
+
+            subOrder.stripeTransferId = transfer.id;
+            await subOrder.save();
+        }
 
         const allSubOrders = await SubOrder.find({ order: subOrder.order });
         const allDelivered = allSubOrders.every((s) => s.status === 'delivered');

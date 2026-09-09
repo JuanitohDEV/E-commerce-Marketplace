@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middleware/authenticate');
+const idempotency = require('../middleware/idempotency');
 const {
     checkout,
     getMyOrders,
@@ -11,12 +12,14 @@ const {
     getAllOrders,
 } = require ('../controllers/order.controller');
 
+
+
 const router = express.Router();
 
 // ------------- Customer Routes -------------
 
 // POST /api/orders/checkout
-router.post('/checkout', authenticate, checkout);
+router.post('/checkout', authenticate, idempotency, checkout);
 
 // GET /api/orders/my-orders
 router.get('/my-orders', authenticate, getMyOrders);

@@ -52,6 +52,7 @@ const orderSchema = new mongoose.Schema({
   couponCode:   { type: String },
   shippingAddress: addressSnapshotSchema,
   paymentIntentId: { type: String, unique: true, sparse: true },
+  chargeId: { type: String },
   idempotencyKey:  { type: String, unique: true, sparse: true },
   paidAt:      { type: Date },
   cancelledAt: { type: Date },
