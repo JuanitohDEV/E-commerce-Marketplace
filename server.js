@@ -15,7 +15,6 @@ const rateLimit = require('express-rate-limit');
 const startLowStockAlert = require('./src/jobs/lowStockAlert') // Review Stock every hour
 
 
-
 // Project-specific files
 
 const connectDB = require ('./src/config/db'); //conector BD
@@ -27,6 +26,11 @@ const categoryRoutes = require('./src/routes/category.routes');
 const productRoutes = require('./src/routes/product.routes');
 const sellerRoutes = require('./src/routes/seller.routes');
 const inventoryRoutes = require('./src/routes/inventory.routes');
+const cartRoutes = require('./src/routes/cart.routes');
+const orderRoutes = require('./src/routes/order.routes');
+const couponRoutes = require('./src/routes/coupon.routes');
+const webhookRoutes = require('./src/routes/webhook.routes');
+
 
 // Launch App
 const app = express();
@@ -66,6 +70,10 @@ app.use(cors({
 // 3 Morgan  - only in development
 
 if(process.env.NODE_ENV === 'development') app.use(morgan('dev'));
+
+// 3.5 Stripe webhook 
+
+app.use('/api/webhooks', webhookRoutes);
 
 // 4 Body parsers - limit 10kb prevents large payloads (DoS attack)
 
@@ -109,6 +117,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/coupons', couponRoutes);
 
 app.all('*', (req, res) => {
     res.status(404).json({

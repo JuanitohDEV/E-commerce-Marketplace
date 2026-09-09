@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const AppError = require('../utils/AppError');
 const { sendSuccess } = require ('../utils/apiResponse');
+const { sendWelcomeEmail} = require ('../services/email.service');
 
 
 // ------- Internal Helpers ----------------------------
@@ -90,6 +91,9 @@ const register = async (req, res, next) => {
         await User.findByIdAndUpdate(user._id, {
             refreshToken: hashToken(refreshToken),
         });
+
+        // Send welcome email
+        sendWelcomeEmail(user);
     } catch (error) {
         next(error)
     }
