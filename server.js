@@ -30,6 +30,8 @@ const cartRoutes = require('./src/routes/cart.routes');
 const orderRoutes = require('./src/routes/order.routes');
 const couponRoutes = require('./src/routes/coupon.routes');
 const webhookRoutes = require('./src/routes/webhook.routes');
+const reviewRoutes = require('./src/routes/review.routes');
+const returnRoutes = require('./src/routes/return.routes');
 
 
 // Launch App
@@ -120,6 +122,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/returns', returnRoutes);
 
 app.all('*', (req, res) => {
     res.status(404).json({
